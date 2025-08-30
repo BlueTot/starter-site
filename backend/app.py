@@ -80,6 +80,7 @@ def application(
     start_response("200 OK", [("Content-Type", "application/json")])
     return [response_body]
 
+
 def signup(
         environ: WSGIEnvironment,
         start_response: StartResponse
@@ -127,6 +128,7 @@ def signup(
     
     return redirect(start_response, "/")
 
+
 """
 
 CREATE TABLE users (
@@ -144,6 +146,7 @@ CREATE TABLE SESSIONS (
 );
 """
 
+
 def check_passwords(hash_row: Optional[dict[str, str]], input_pw):
     """
         Function to check if an input password matches the user's
@@ -155,7 +158,16 @@ def check_passwords(hash_row: Optional[dict[str, str]], input_pw):
         stored_hash_bytes = hash_row["password_hash"].encode("utf-8")
         return bcrypt.checkpw(input_pw.encode("utf-8"), stored_hash_bytes)
 
+
+def is_session_valid(create_time: datetime) -> bool:
+    """
+        Checks if the session id is not expired given its create time
+    """
+    if create_time.tzinfo is None:
+        create_time = create_time.replace(tzinfo=timezone.utc)
+    return datetime.now(timezone.utc) - create_time <= timedelta(minutes=1)
     
+
 def validate_session_id(
         session_row: Optional[dict[str, Any]], 
         existing_session: Optional[str]
@@ -168,12 +180,10 @@ def validate_session_id(
     if session_row is None or existing_session is None:
         return None
 
-    session_id = session_row ["id"]
+    session_id = session_row["id"]
     create_time: datetime = session_row["created_at"]
-    if datetime.now() - create_time <= timedelta(minutes=1):
-        return session_id
-    else:
-        return None
+    print(datetime.now(), create_time, timedelta(minutes=1), file=sys.stderr)
+    return session_id if is_session_valid(create_time) else None
 
 
 def login(
@@ -209,6 +219,7 @@ def login(
         
     cookies = environ.get("HTTP_COOKIE", "")
     session_id = None
+    print(cookies.split(";"), file=sys.stderr)
     for cookie in cookies.split(";"):
         key, _, value = cookie.strip().partition("=")
         if key == "session_id":
