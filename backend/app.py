@@ -1,5 +1,6 @@
+import sys
 import json
-from typing import Callable, Iterable, Any, Iterator
+from typing import Callable, Iterable, Any, Iterator, Optional
 from mysql.connector.connection import MySQLConnection
 import mysql.connector
 import os
@@ -7,6 +8,7 @@ import urllib.parse
 from contextlib import contextmanager
 import bcrypt
 import uuid
+from datetime import datetime, timedelta, timezone
 
 WSGIEnvironment = dict[str, Any]
 StartResponse = Callable[[str, list[tuple[str, str]]], None]
@@ -125,6 +127,54 @@ def signup(
     
     return redirect(start_response, "/")
 
+"""
+
+CREATE TABLE users (
+    id CHAR(36) PRIMARY KEY,
+    username VARCHAR(255) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE SESSIONS (
+    id CHAR(36) PRIMARY KEY,
+    user_id CHAR(36) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+);
+"""
+
+def check_passwords(hash_row: Optional[dict[str, str]], input_pw):
+    """
+        Function to check if an input password matches the user's
+        stored password hash if it exists
+    """
+    if hash_row is None:
+        return False # user doesn't exist
+    else:
+        stored_hash_bytes = hash_row["password_hash"].encode("utf-8")
+        return bcrypt.checkpw(input_pw.encode("utf-8"), stored_hash_bytes)
+
+    
+def validate_session_id(
+        session_row: Optional[dict[str, Any]], 
+        existing_session: Optional[str]
+) -> Optional[str]:
+    """
+        Checks if a session id is valid and returns it if it is
+        Returns None otherwise
+    """
+
+    if session_row is None or existing_session is None:
+        return None
+
+    session_id = session_row ["id"]
+    create_time: datetime = session_row["created_at"]
+    if datetime.now() - create_time <= timedelta(minutes=1):
+        return session_id
+    else:
+        return None
+
 
 def login(
         environ: WSGIEnvironment,
@@ -137,9 +187,93 @@ def login(
     params = get_params(environ)
     username, password = params["username"], params["password"]
 
-    data = {"message": f"Hello from /login, username: {username}, password: {password}"}
-    response_body: bytes = json.dumps(data).encode("utf-8")
-    start_response("200 OK", [("Content-Type", "application/json")])
-    return [response_body]
+    # check if username exists and password is correct
+    with get_db() as conn:
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute(
+            "SELECT password_hash FROM users WHERE username = %s",
+            (username,)
+        )
+        hash_row = cursor.fetchone()
+        cursor.close()
 
+    if not check_passwords(hash_row, password):
+        data = {"message": "Invalid username or password"}
+        response_body: bytes = json.dumps(data).encode("utf-8")
+        start_response("401 Unauthorized", [("Content-Type", "application/json")])
+        return [response_body]
+
+    # check if existing session is valid
+    # if is valid, we set the cookie as usual
+    # otherwise, we generate a new session id and set the cookie
+        
+    cookies = environ.get("HTTP_COOKIE", "")
+    session_id = None
+    for cookie in cookies.split(";"):
+        key, _, value = cookie.strip().partition("=")
+        if key == "session_id":
+            session_id = value
+            break
+
+    # find stored session data
+    with get_db() as conn:
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute(
+            """
+                SELECT sessions.id, sessions.created_at FROM sessions
+                INNER JOIN users ON users.id = sessions.user_id
+                WHERE username = %s
+            """,
+            (username,)
+        )
+        session_row = cursor.fetchone()
+        cursor.close()
+
+    validated_session = validate_session_id(session_row, session_id)
+
+    print(validated_session, file=sys.stderr)
+
+    # invalid session id
+    if validated_session is None:
+
+        new_session_id = str(uuid.uuid4())
+        now = datetime.now(timezone.utc)
+
+        # store session data
+        with get_db() as conn:
+            cursor = conn.cursor(dictionary=True)
+            
+            # no previous session exists - insert
+            if session_row is None:
+                cursor.execute(
+                    """
+                        INSERT INTO sessions (id, user_id) 
+                        SELECT %s, users.id
+                        FROM users
+                        WHERE users.username = %s
+                    """,
+                    (new_session_id, username)
+                )
+            # previous session exists - update it
+            else:
+                cursor.execute(
+                    """
+                        UPDATE sessions 
+                        INNER JOIN users ON users.id = sessions.user_id
+                        SET sessions.id = %s, sessions.created_at = %s
+                        WHERE username = %s
+                    """,
+                    (new_session_id, now, username)
+                )
+            conn.commit()
+            cursor.close()
+    else:
+        new_session_id = validated_session
+
+    # set cookie and send response
+    start_response("303 See Other", [
+        ("Location", "/dashboard.html"),
+        ("Set-Cookie", f"session_id={new_session_id}; HttpOnly; Path=/"),
+    ])
+    return [b"Logging in..."]
 
