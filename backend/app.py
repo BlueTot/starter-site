@@ -60,6 +60,24 @@ def redirect(start_response: StartResponse, location: str):
     return [b"Redirecting..."]
 
 
+def serve_html(filename: str, start_response):
+    """
+        Function to serve frontend html to the browser
+        For frontend routes
+    """
+    filepath = os.path.join(os.path.dirname(__file__), filename)
+
+    if not os.path.exists(filepath):
+        start_response("404 Not Found", [("Content-Type", "text/plain")])
+        return [b"File not found"]
+    
+    with open(filepath, "rb") as f:
+        content = f.read()
+
+    start_response("200 OK", [("Content-Type", "text/html")])
+    return [content]
+
+
 def application(
         environ: WSGIEnvironment, 
         start_response: StartResponse
@@ -70,15 +88,24 @@ def application(
 
     path: str = environ.get("PATH_INFO", "/")
 
-    if path == "/signup":
-        return signup(environ, start_response)
-    elif path == "/login":
-        return login(environ, start_response)
-
-    data = {"message": f"Hello from backend/app.py! You are visiting {path}"}
-    response_body: bytes = json.dumps(data).encode("utf-8")
-    start_response("200 OK", [("Content-Type", "application/json")])
-    return [response_body]
+    match path:
+        case "/":
+            return serve_html("../frontend/index.html", start_response)
+        case "/signup":
+            return serve_html("../frontend/signup.html", start_response)
+        case "/login":
+            return serve_html("../frontend/login.html", start_response)
+        case "/dashboard":
+            return serve_html("../frontend/dashboard.html", start_response)
+        case "/api/signup":
+            return signup(environ, start_response)
+        case "/api/login":
+            return login(environ, start_response)
+        case "/api/dashboard":
+            return dashboard(environ, start_response)
+        case _:
+            start_response("404 Not Found", [("Content-Type", "text/plain")])
+            return [b"File not found"]
 
 
 def signup(
@@ -186,6 +213,22 @@ def validate_session_id(
     return session_id if is_session_valid(create_time) else None
 
 
+def get_session_id_from_cookies(environ: WSGIEnvironment) -> Optional[str]:
+    """
+        Gets the session id from the environ's cookies
+        Returns None if doesn't exist
+    """
+    cookies = environ.get("HTTP_COOKIE", "")
+    session_id = None
+    for cookie in cookies.split(";"):
+        # .partition splits on the first = which is safer than .split
+        key, _, value = cookie.strip().partition("=")
+        if key == "session_id":
+            session_id = value
+            break
+    return session_id
+
+
 def login(
         environ: WSGIEnvironment,
         start_response: StartResponse
@@ -216,15 +259,8 @@ def login(
     # check if existing session is valid
     # if is valid, we set the cookie as usual
     # otherwise, we generate a new session id and set the cookie
-        
-    cookies = environ.get("HTTP_COOKIE", "")
-    session_id = None
-    print(cookies.split(";"), file=sys.stderr)
-    for cookie in cookies.split(";"):
-        key, _, value = cookie.strip().partition("=")
-        if key == "session_id":
-            session_id = value
-            break
+
+    session_id: Optional[str] = get_session_id_from_cookies(environ)
 
     # find stored session data
     with get_db() as conn:
@@ -237,12 +273,12 @@ def login(
             """,
             (username,)
         )
-        session_row = cursor.fetchone()
+        session_row: Optional[dict[str, Any]] = cursor.fetchone()
         cursor.close()
 
     validated_session = validate_session_id(session_row, session_id)
 
-    print(validated_session, file=sys.stderr)
+    # print(validated_session, file=sys.stderr)
 
     # invalid session id
     if validated_session is None:
@@ -283,8 +319,41 @@ def login(
 
     # set cookie and send response
     start_response("303 See Other", [
-        ("Location", "/dashboard.html"),
+        ("Location", "/dashboard"),
         ("Set-Cookie", f"session_id={new_session_id}; HttpOnly; Path=/"),
     ])
     return [b"Logging in..."]
+
+
+def dashboard(
+        environ: WSGIEnvironment,
+        start_response: StartResponse
+) -> Iterable[bytes]:
+    """
+        Function to get the username given the user's valid session id
+        (Protected Route)
+    """
+    
+    session_id: Optional[str] = get_session_id_from_cookies(environ)
+    if session_id is None:
+        raise Exception("Accessing dashboard with no session id???")
+
+    with get_db() as conn:
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute(
+            """
+                SELECT username FROM users
+                INNER JOIN sessions ON users.id = sessions.user_id
+                WHERE sessions.id = %s
+            """,
+            (session_id,)
+        )
+        # ignore type warning as we will always have a username
+        username: str = cursor.fetchone()["username"] # type: ignore
+        cursor.close()
+    
+    data = {"username": username}
+    response_body: bytes = json.dumps(data).encode("utf-8")
+    start_response("200 OK", [("Content-Type", "application/json")])
+    return [response_body]
 
