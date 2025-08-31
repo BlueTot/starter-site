@@ -1,4 +1,3 @@
-import sys
 import json
 from typing import Callable, Iterable, Any, Iterator, Optional
 from mysql.connector.connection import MySQLConnection
@@ -209,8 +208,27 @@ def validate_session_id(
 
     session_id = session_row["id"]
     create_time: datetime = session_row["created_at"]
-    print(datetime.now(), create_time, timedelta(minutes=1), file=sys.stderr)
+    # print(datetime.now(), create_time, timedelta(minutes=1), file=sys.stderr)
     return session_id if is_session_valid(create_time) else None
+
+
+def exists_valid_session_id(session_id: str) -> bool:
+    """
+        Checks if a user's session id is valid and exists
+    """
+    with get_db() as conn:
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute(
+            """
+                SELECT id, created_at FROM sessions
+                WHERE id = %s
+            """,
+            (session_id,)
+        )
+        session_row: Optional[dict[str, Any]] = cursor.fetchone()
+        cursor.close()
+    validated: Optional[str] = validate_session_id(session_row, session_id)
+    return validated is not None
 
 
 def get_session_id_from_cookies(environ: WSGIEnvironment) -> Optional[str]:

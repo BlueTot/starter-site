@@ -8,3 +8,6 @@ dotenv_path = os.path.join(os.path.dirname(__file__), ".env")
 load_dotenv(dotenv_path)
 
 from backend.app import application
+from backend.middleware import auth_middleware
+
+application = auth_middleware(application)
