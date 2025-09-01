@@ -6,8 +6,11 @@
         <title>Dashboard</title>
     </head>
     <body>
+        <form id="back-form" action="/", method="GET">
+            <button type="submit">back</button>
+        </form>
         <h1 id="header"></h1>
-        <form action="/api/logout", method="POST">
+        <form id="logout-form" action="/api/logout", method="POST">
             <button type="submit">Logout</button>
         </form>
         <script src="/static/js/dashboard.js"></script>

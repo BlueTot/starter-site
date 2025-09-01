@@ -1,5 +1,5 @@
 /* Reset some defaults */
-body, h1, form {
+body, h1, #logout-form {
     margin: 0;
     padding: 0;
 }
@@ -16,6 +16,28 @@ body {
     justify-content: center;
 }
 
+/* Back button form pinned to top-left */
+#back-form {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    margin: 0;
+}
+
+#back-form button {
+    background: #ddd;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: background 0.2s;
+}
+
+#back-form button:hover {
+    background: #bbb;
+}
+
 /* Dashboard header */
 #header {
     font-size: 2rem;
@@ -26,13 +48,13 @@ body {
 }
 
 /* Form styling */
-form {
+#logout-form form {
     display: flex;
     justify-content: center;
 }
 
 /* Button styling */
-button {
+#logout-form button {
     background: #4a90e2;
     border: none;
     color: white;
