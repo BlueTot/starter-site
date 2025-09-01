@@ -1,10 +1,10 @@
 import json
-from typing import Callable, Iterable, Any, Optional
-from backend.app import exists_valid_session_id, get_session_id_from_cookies, redirect
+from typing import Iterable, Optional
 
-WSGIEnvironment = dict[str, Any]
-StartResponse = Callable[[str, list[tuple[str, str]]], None]
-App = Callable[[WSGIEnvironment, StartResponse], Iterable[bytes]]
+from backend.lib.auth import exists_valid_session_id, get_session_id_from_cookies
+from backend.lib.wsgiutils import redirect
+from backend.lib.type_defs import WSGIEnvironment, StartResponse, App
+
 
 def auth_middleware(app: App) -> App:
 
