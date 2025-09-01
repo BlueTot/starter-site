@@ -2,29 +2,15 @@
 <html>
     <head>
         <meta charset="UTF-8">
-        <link rel="stylesheet" href="/static/dashboard.css">
+        <link rel="stylesheet" href="/static/css/dashboard.css">
         <title>Dashboard</title>
-        <script>
-            document.addEventListener("DOMContentLoaded", async () => {
-                try {
-                    const response = await fetch("/api/dashboard");
-                    if (!response.ok) {
-                        throw new Error("Unauthorized or failed request");
-                    }
-                    const data = await response.json();
-                    document.getElementById("header").textContent = `Welcome to your dashboard, ${data.username}`;
-                                        
-                } catch (err) {
-                    console.error("Error fetching dashboard:", err);
-                }
-            });
-        </script>
     </head>
     <body>
         <h1 id="header"></h1>
         <form action="/api/logout", method="POST">
             <button type="submit">Logout</button>
         </form>
+        <script src="/static/js/dashboard.js"></script>
     </body>
 </html>
 

@@ -2,7 +2,7 @@
 <html>
     <head>
         <meta charset="UTF-8">
-        <link rel="stylesheet" href="/static/login.css">
+        <link rel="stylesheet" href="/static/css/login.css">
         <title>Login</title>
     </head>
     <body>
@@ -18,23 +18,7 @@
             <button type="submit">Login</button>
         </form>
         <p id="error-message" style="color: red; display: none;"></p>
-        <script>
-            document.getElementById("login-form").addEventListener("submit", async (e) => {
-                e.preventDefault(); 
-                const formData = new FormData(e.target);
-                const response = await fetch("/api/login", {
-                    method: "POST",
-                    body: new URLSearchParams(formData)
-                });
-
-                if (response.ok) {
-                    window.location.href = "/dashboard";
-                } else {
-                    document.getElementById("error-message").textContent = "Invalid username or password.";
-                    document.getElementById("error-message").style.display = "block";
-                }
-            });
-        </script>
+        <script src="/static/js/login.js"></script>
     </body>
 </html>
 

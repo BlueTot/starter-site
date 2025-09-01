@@ -1,0 +1,13 @@
+document.addEventListener("DOMContentLoaded", async () => {
+    try {
+        const response = await fetch("/api/dashboard");
+        if (!response.ok) {
+            throw new Error("Unauthorized or failed request");
+        }
+        const data = await response.json();
+        document.getElementById("header").textContent = `Welcome to your dashboard, ${data.username}`;
+
+    } catch (err) {
+        console.error("Error fetching dashboard:", err);
+    }
+});
