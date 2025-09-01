@@ -98,8 +98,8 @@ def login(
         new_session_id = validated_session
 
     # set cookie and send response
-    start_response("303 See Other", [
-        ("Location", "/dashboard"),
+    start_response("200 Ok", [
+        ("Content-Type", "application/json"),
         ("Set-Cookie", f"session_id={new_session_id}; HttpOnly; Path=/"),
     ])
     return [b"Logging in..."]

@@ -52,5 +52,8 @@ def signup(
         conn.commit() # push changes
         cursor.close() # close the cursor
     
-    return redirect(start_response, "/")
+    data = {"message": "ok"}
+    response_body: bytes = json.dumps(data).encode("utf-8")
+    start_response("200 Ok", [("Content-Type", "application/json")])
+    return [response_body]
 

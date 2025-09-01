@@ -10,13 +10,31 @@
             <button type="submit">back</button>
         </form>
         <h1>Please login to your account</h1>
-        <form id="login-form" action="/api/login", method="POST">
+        <form id="login-form">
             <label for="username">Username:</label>
             <input type="text" name="username" required>
             <label for="password">Password:</label>
             <input type="password" name="password" required>
             <button type="submit">Login</button>
         </form>
+        <p id="error-message" style="color: red; display: none;"></p>
+        <script>
+            document.getElementById("login-form").addEventListener("submit", async (e) => {
+                e.preventDefault(); 
+                const formData = new FormData(e.target);
+                const response = await fetch("/api/login", {
+                    method: "POST",
+                    body: new URLSearchParams(formData)
+                });
+
+                if (response.ok) {
+                    window.location.href = "/dashboard";
+                } else {
+                    document.getElementById("error-message").textContent = "Invalid username or password.";
+                    document.getElementById("error-message").style.display = "block";
+                }
+            });
+        </script>
     </body>
 </html>
 
