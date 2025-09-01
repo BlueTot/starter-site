@@ -1,0 +1,66 @@
+/* Reset some defaults */
+body, h1, form {
+    margin: 0;
+    padding: 0;
+}
+
+/* General page styling */
+body {
+    font-family: Arial, sans-serif;
+    background: linear-gradient(135deg, #f0f4f8, #d9e2ec);
+    color: #333;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Dashboard header */
+#header {
+    font-size: 2rem;
+    font-weight: bold;
+    margin-bottom: 2rem;
+    color: #222;
+    text-align: center;
+}
+
+/* Form styling */
+form {
+    display: flex;
+    justify-content: center;
+}
+
+/* Button styling */
+button {
+    background: #4a90e2;
+    border: none;
+    color: white;
+    font-size: 1rem;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.3s ease, transform 0.1s ease;
+}
+
+/* Hover and active states */
+button:hover {
+    background: #357ab7;
+}
+
+button:active {
+    transform: scale(0.97);
+}
+
+/* Small screen adjustments */
+@media (max-width: 600px) {
+    #header {
+        font-size: 1.5rem;
+    }
+
+    button {
+        width: 100%;
+        padding: 1rem;
+    }
+}
+

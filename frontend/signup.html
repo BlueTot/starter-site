@@ -2,11 +2,15 @@
 <html>
     <head>
         <meta charset="UTF-8">
+        <link rel="stylesheet" href="/static/signup.css">
         <title>Sign Up</title>
     </head>
     <body>
+        <form id="back-form" action="/", method="GET">
+            <button type="submit">back</button>
+        </form>
         <h1>Please sign up for an account</h1>
-        <form action="/api/signup", method="POST">
+        <form id="login-form" action="/api/signup", method="POST">
             <label for="username">Username:</label>
             <input type="text" name="username" required>
             <label for="password">Password:</label>
