@@ -47,15 +47,22 @@ def hash_password(password: str) -> str:
     return hashed.decode()
 
 
-def redirect(start_response: StartResponse, location: str):
+def redirect(
+        start_response: StartResponse, 
+        location: str, 
+        set_cookie: Optional[tuple[str, str]] = None
+) -> Iterable[bytes]:
     """
         Function to redirect user to given route
         Returns a response
     """
-    start_response("302 Found", [
+    headers = [
         ("Location", location),
         ("Content-Type", "text/plain")
-    ])
+    ]
+    if set_cookie is not None:
+        headers.append(set_cookie)
+    start_response("302 Found", headers)
     return [b"Redirecting..."]
 
 
@@ -102,6 +109,8 @@ def application(
             return login(environ, start_response)
         case "/api/dashboard":
             return dashboard(environ, start_response)
+        case "/api/logout":
+            return logout(environ, start_response)
         case _:
             start_response("404 Not Found", [("Content-Type", "text/plain")])
             return [b"File not found"]
@@ -374,4 +383,38 @@ def dashboard(
     response_body: bytes = json.dumps(data).encode("utf-8")
     start_response("200 OK", [("Content-Type", "application/json")])
     return [response_body]
+
+
+def logout(
+        environ: WSGIEnvironment,
+        start_response: StartResponse
+) -> Iterable[bytes]:
+    """
+        Function that logs out the current user's session
+        (Protected Route)
+    """
+
+    session_id: Optional[str] = get_session_id_from_cookies(environ)
+    if session_id is None:
+        raise Exception("Accessing logout with no session id???")
+
+    # delete cookie in sessions table
+    with get_db() as conn:
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute(
+            """
+                DELETE FROM sessions
+                WHERE sessions.id = %s
+            """,
+            (session_id,)
+        )
+        conn.commit()
+        cursor.close()
+
+    # redirect to / and clear cookie
+    return redirect(
+        start_response, "/",
+        ("Set-Cookie", "session_id=; Path=/; Max-Age=0; HttpOnly; Secure")
+    )
+
 
