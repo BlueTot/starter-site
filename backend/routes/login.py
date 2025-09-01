@@ -1,7 +1,7 @@
 import json
 from typing import Iterable, Any, Optional
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime
 
 from backend.lib.type_defs import WSGIEnvironment, StartResponse
 from backend.lib.db import get_db
@@ -58,13 +58,11 @@ def login(
 
     validated_session = validate_session_id(session_row, session_id)
 
-    # print(validated_session, file=sys.stderr)
-
     # invalid session id
     if validated_session is None:
 
         new_session_id = str(uuid.uuid4())
-        now = datetime.now(timezone.utc)
+        now = datetime.now()
 
         # store session data
         with get_db() as conn:

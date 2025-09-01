@@ -1,6 +1,7 @@
 from typing import Any, Optional
+import sys
 import bcrypt
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 
 from backend.lib.type_defs import WSGIEnvironment
 from backend.lib.db import get_db
@@ -31,9 +32,7 @@ def is_session_valid(create_time: datetime) -> bool:
     """
         Checks if the session id is not expired given its create time
     """
-    if create_time.tzinfo is None:
-        create_time = create_time.replace(tzinfo=timezone.utc)
-    return datetime.now(timezone.utc) - create_time <= timedelta(minutes=1)
+    return datetime.now() - create_time <= timedelta(minutes=1)
     
 
 def validate_session_id(
